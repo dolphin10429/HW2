@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ n }} x {{ n }} Grid World</title>
+    <style>
+        .matrix-container { display: flex; justify-content: space-around; }
+        .grid-wrapper { display: flex; flex-direction: column; align-items: center; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat({{ n }}, 50px);
+            grid-template-rows: repeat({{ n }}, 50px);
+            gap: 1px;
+        }
+        .cell {
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: bold;
+            width: 50px; height: 50px;
+            border: 1px solid black;
+            background-color: white;
+        }
+        .obstacle { background-color: grey; color: transparent; }
+        .start { background-color: green; color: white; }
+        .end { background-color: red; color: white; }
+        .path { background-color: lightgreen; }
+        .arrow-gray { color: #999; }
+        .arrow-black { color: black; }
+    </style>
+</head>
+<body>
+    <h1>{{ n }} x {{ n }} Grid World</h1>
+    <p>第 <span id="stepNum">1</span> 步，共 {{ steps }} 步</p>
+    <button onclick="nextStep()">下一步</button>
+
+    <h2>Policy (Best Action at Each Cell)</h2>
+    <div class="grid-wrapper">
+        <div class="grid" id="policyGrid"></div>
+    </div>
+
+    <h2>Value Function (V)</h2>
+    <div class="grid-wrapper">
+        <div class="grid" id="valueGrid"></div>
+    </div>
+
+    <script>
+        const n = {{ n }};
+        const totalSteps = {{ steps }};
+        const paths = {{ all_paths | tojson }};
+        const policyMatrices = {{ policy_matrices | tojson }};
+        const valueMatrices = {{ value_matrices | tojson }};
+        let currentStep = 0;
+
+        function inPath(i, j, step) {
+            return paths[step].some(([x, y]) => x === i && y === j);
+        }
+
+        function renderGrids(step) {
+            const policy = policyMatrices[step];
+            const value = valueMatrices[step];
+
+            const policyGrid = document.getElementById('policyGrid');
+            const valueGrid = document.getElementById('valueGrid');
+            policyGrid.innerHTML = '';
+            valueGrid.innerHTML = '';
+
+            let flat = value.flat().filter(v => v !== null);
+            let maxv = Math.max(...flat);
+            let minv = Math.min(...flat);
+
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    const sym = policy[i][j];
+                    const val = value[i][j];
+
+                    // Policy cell
+                    const pc = document.createElement('div');
+                    pc.className = 'cell';
+                    if (sym === '■') pc.classList.add('obstacle');
+                    else if (sym === 'S') pc.classList.add('start');
+                    else if (sym === 'E') pc.classList.add('end');
+                    else if (inPath(i, j, step)) pc.classList.add('path');
+                    pc.innerHTML = `<span class="${['↑','↓','←','→'].includes(sym) ? (inPath(i,j,step)?'arrow-black':'arrow-gray') : ''}">${sym}</span>`;
+                    policyGrid.appendChild(pc);
+
+                    // Value cell
+                    const vc = document.createElement('div');
+                    vc.className = 'cell';
+                    if (val === null) {
+                        vc.classList.add('obstacle');
+                    } else {
+                        let ratio = (val - minv) / (maxv - minv + 1e-5);
+                        let bg = 'white';
+                        if (ratio > 0.7) bg = '#a2f3a2';
+                        else if (ratio > 0.4) bg = '#d0f0ff';
+                        else if (ratio < 0.1) bg = '#ffaaaa';
+                        vc.style.backgroundColor = bg;
+                        vc.textContent = val.toFixed(2);
+                    }
+                    valueGrid.appendChild(vc);
+                }
+            }
+            document.getElementById("stepNum").textContent = step + 1;
+        }
+
+        function nextStep() {
+            currentStep = (currentStep + 1) % totalSteps;
+            renderGrids(currentStep);
+        }
+
+        renderGrids(0);
+    </script>
+</body>
+</html>

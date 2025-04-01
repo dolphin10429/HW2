@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>選擇起點終點與障礙物</title>
+    <style>
+        .grid {
+            display: grid;
+            gap: 2px;
+            grid-template-columns: repeat(5, 50px);
+            grid-template-rows: repeat(5, 50px);
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .empty { background-color: white; }
+        .obstacle { background-color: grey; }
+        .start { background-color: green; color: white; }
+        .end { background-color: red; color: white; }
+    </style>
+</head>
+<body>
+    <h1>選擇起點、終點和障礙物</h1>
+    <form id="matrixForm" method="POST" onsubmit="return validateForm();">
+        <label for="n">輸入 n 值 (3~7): </label>
+        <input type="number" name="n" id="n" value="5" min="3" max="7" required>
+        <input type="hidden" name="start" id="start">
+        <input type="hidden" name="end" id="end">
+        <input type="hidden" name="obstacles" id="obstacles">
+        <button type="submit">送出</button>
+    </form>
+    <div class="grid" id="grid"></div>
+
+    <script>
+        let grid = [], start = null, end = null, obstacles = [];
+        const gridContainer = document.getElementById("grid");
+
+        function initializeGrid() {
+            gridContainer.innerHTML = '';
+            grid = [];
+            let gridSize = parseInt(document.getElementById("n").value);
+            gridContainer.style.gridTemplateColumns = `repeat(${gridSize}, 50px)`;
+            gridContainer.style.gridTemplateRows = `repeat(${gridSize}, 50px)`;
+
+            for (let i = 0; i < gridSize; i++) {
+                let row = [];
+                for (let j = 0; j < gridSize; j++) {
+                    let cell = document.createElement("div");
+                    cell.classList.add("cell", "empty");
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener("click", handleCellClick);
+                    gridContainer.appendChild(cell);
+                    row.push(cell);
+                }
+                grid.push(row);
+            }
+        }
+
+        function handleCellClick(event) {
+            const row = parseInt(event.target.dataset.row);
+            const col = parseInt(event.target.dataset.col);
+            const cell = grid[row][col];
+
+            if (!start) {
+                start = { row, col };
+                cell.classList.remove("empty");
+                cell.classList.add("start");
+            } else if (!end) {
+                if (row === start.row && col === start.col) return;
+                end = { row, col };
+                cell.classList.remove("empty");
+                cell.classList.add("end");
+            } else {
+                if ((row === start.row && col === start.col) || (row === end.row && col === end.col)) return;
+                if (!obstacles.some(obs => obs.row === row && obs.col === col)) {
+                    obstacles.push({ row, col });
+                    cell.classList.remove("empty");
+                    cell.classList.add("obstacle");
+                }
+            }
+
+            document.getElementById("start").value = start ? `${start.row},${start.col}` : '';
+            document.getElementById("end").value = end ? `${end.row},${end.col}` : '';
+            document.getElementById("obstacles").value = obstacles.map(obs => `${obs.row},${obs.col}`).join(' ');
+        }
+
+        function validateForm() {
+            if (!start) { alert("請選擇起點"); return false; }
+            if (!end) { alert("請選擇終點"); return false; }
+            return true;
+        }
+
+        document.getElementById("n").addEventListener("input", initializeGrid);
+        initializeGrid();
+    </script>
+</body>
+</html>
